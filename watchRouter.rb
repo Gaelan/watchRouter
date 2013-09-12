@@ -14,6 +14,8 @@
 # - More testing.
 # - Escalate log levels / notifications on frequent updates / failures.
 # - Change everything to URI parse model like IWMN.
+# - Process command line arguements.
+# - Do something smart with passwords.
 
 def silence_warnings(&block)
 	warn_level = $VERBOSE
@@ -51,7 +53,7 @@ IWMNns      = "ns1.iwantmyname.net"
 NSenom      = "dns1.name-services.com"
 NSgoogle    = "8.8.8.8"
 RouterIP    = "10.0.1.1"
-SNMPpw      = "cabrini"
+SNMPpw      = ""
 Wait_Between_Checks = 60 # Seconds between checks.
 Watchdog_Interval   = 15 # Heartbeat, log every N checks.
 
@@ -132,9 +134,14 @@ def ddns_update_enom(host, zone, ip, pw)
 end
 
 def parse_response_enom(body)
+	response = {}
 	body.each do |line|
 		puts line
+		value = line.chomp.split('=')
+		response[value[0]] = value[1]
 	end
+	puts response
+	return response
 end
 
 # Check our address in DNS
