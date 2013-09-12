@@ -4,7 +4,6 @@
 # - Clean up / switch DNS code (lots of messages currently).
 # - Deal with DNS failures
 # - Clean up SNMP code. Deal with errors and timeouts.
-# - Handle errors while waiting for DSL line to come up.
 # - Deal with change-in-process IP address (i.e., 0.0.0.1 etc.).
 # - Parse HTTP (update) messages.
 # - Diagnose reasons for changes (e.g. router down, etc).
@@ -259,12 +258,13 @@ end
 
 # Toggle debugging.
 
-$debug = false
-$force = true
+debug = false
+force = false
+waiting = false
 
 Signal.trap(:USR1) do
-  $debug = !$debug
-  log(:notice, "Debugging " + ($debug ? "on" : "off"))
+  debug = !debug
+  log(:notice, "Debugging " + (debug ? "on" : "off"))
 end
 
 loops = 0
@@ -274,8 +274,22 @@ log(:info, "Start up. Got #{prev_IP_addr} from DNS. Checking every #{Wait_Betwee
 
 loop do
   current_IP_addr = get_router_ipaddr()
-  if (current_IP_addr != prev_IP_addr || $force) then
-		if ($force) then
+	if (current_IP_addr == "noSuchInstance") then
+		log(:notice, "Waiting for link to come up...")
+		if (!waiting) then
+			old_Wait = Wait_Between_Checks
+			old_Watchdog = Watchdog_Interval
+			Wait_Between_Checks = 15
+			Watchdog_Interval = 8
+			waiting = true
+		end
+  elsif (current_IP_addr != prev_IP_addr || force) then
+		if (waiting) then
+			Wait_Between_Checks = old_Wait
+			Watchdog_Interval = old_Watchdog
+			waiting = false
+		end
+		if (force) then
 			log(:notice, "Manually forced update, current IP address is #{current_IP_addr} ...")
     elsif (prev_IP_addr == "0.0.0.0") then
       log(:notice, "Forced update to #{current_IP_addr} ...")
