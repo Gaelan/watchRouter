@@ -4,11 +4,13 @@
 # - Clean up / switch DNS code (lots of messages currently).
 # - Deal with DNS failures
 # - Clean up SNMP code. Deal with errors and timeouts.
+# - Deal with change-in-process IP address (i.e., 0.0.0.1 etc.).
 # - Parse HTTP (update) messages.
 # - Diagnose reasons for changes (e.g. router down, etc).
-# - Deal with partial changes (DNS lookup on each host).
+# - Deal with incomplete update (do DNS lookup on each host).
 # - Be less verbose on changes.
 # - See if we can find the return values (e.g. body?) HE sends some for sure.
+# - Parse HE response.body.
 # - Log DNS propagation / test changes.
 # - Notify special people.
 # - More testing.
@@ -16,6 +18,7 @@
 # - Change everything to URI parse model like IWMN.
 # - Process command line arguements.
 # - Do something smart with passwords.
+# - Command line args: force update, force particular provider.
 
 def silence_warnings(&block)
 	warn_level = $VERBOSE
@@ -94,8 +97,14 @@ def ddns_update_he(user, pw, tid, ip)
 
   response = http.request(request)
 
+	body = parse_response_he(response.body)
+
   log(:info,
-		"ddns_update_he(#{tid}, #{ip}) returned \"#{response.body} (#{response.code})\"")
+		"ddns_update_he(#{tid}, #{ip}) returned \"#{body} (#{response.code})\"")
+end
+
+def parse_response_he(body)
+	return body.chomp
 end
 
 # Update dynamic DNS at iwantmyname.
@@ -267,8 +276,7 @@ loop do
   if (current_IP_addr != prev_IP_addr || $force) then
 		if ($force) then
 			log(:notice, "Manually forced update, current IP address is #{current_IP_addr} ...")
-		end
-    if (prev_IP_addr == "0.0.0.0") then
+    elsif (prev_IP_addr == "0.0.0.0") then
       log(:notice, "Forced update to #{current_IP_addr} ...")
     else
       log(:notice, "Router IP address changed from #{prev_IP_addr} to #{current_IP_addr} ...")
