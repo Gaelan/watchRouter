@@ -4,6 +4,7 @@
 # - Clean up / switch DNS code (lots of messages currently).
 # - Deal with DNS failures
 # - Clean up SNMP code. Deal with errors and timeouts.
+# - Handle errors while waiting for DSL line to come up.
 # - Deal with change-in-process IP address (i.e., 0.0.0.1 etc.).
 # - Parse HTTP (update) messages.
 # - Diagnose reasons for changes (e.g. router down, etc).
