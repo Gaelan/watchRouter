@@ -49,14 +49,19 @@ include Dnsruby
 
 $stdout.sync = true
 
-BRpw = HEpw = ""
-HEtid       = ""
-HEuser      = ""
+require '/etc/watchrouter.secrets'
+
+BRpw        = secrets[:enom][:pw]
+HEuser      = secrets[:he][:user]
+HEpw        = secrets[:he][:pw]
+HEtid       = secrets[:he][:tid]
+IWNMuser    = secrets[:iwmn][:user]
+IWNMpw      = secrets[:iwmn][:pw]
 IWMNns      = "ns1.iwantmyname.net"
 NSenom      = "dns1.name-services.com"
 NSgoogle    = "8.8.8.8"
 RouterIP    = "10.0.1.1"
-SNMPpw      = ""
+SNMPpw      = secrets[:snmp][:pw]
 Wait_Between_Checks = 60 # Seconds between checks.
 Watchdog_Interval   = 15 # Heartbeat, log every N checks.
 
@@ -73,7 +78,7 @@ def ddns_update(ip)
     "psd-chinese.net"    => [ "www", "@" ],
   }.each do |zone, hosts|
     hosts.each do |host|
-      ddns_update_iwmn(host, zone, ip, BRpw)
+      ddns_update_iwmn(host, zone, ip, IWMNuser, IWMNpw)
     end
   end
 	{
@@ -109,14 +114,19 @@ end
 
 # Update dynamic DNS at iwantmyname.
 
-def ddns_update_iwmn(host, zone, ip, pw)
-  uri = URI.parse("https://iwantmyname.com/basicauth/ddns?hostname=#{host}.#{zone}")
+def ddns_update_iwmn(host, zone, ip, user, pw)
+	if (host == "@") then
+		fqdn = "#{zone}"
+	else
+		fqdn = "#{host}.#{zone}"
+	end
+  uri = URI.parse("https://iwantmyname.com/basicauth/ddns?hostname=#{fqdn}")
   http = Net::HTTP.new(uri.host, uri.port)
 	http.use_ssl = true
 	http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
   request = Net::HTTP::Get.new(uri.request_uri)
-	request.basic_auth("", "")
+	request.basic_auth(user, pw)
 
   response = http.request(request)
 
@@ -136,20 +146,18 @@ def ddns_update_enom(host, zone, ip, pw)
   request = Net::HTTP::Get.new(tail)
   response = http.request(request)
 
-	parse_response_enom(response.body)
+	pr = parse_response_enom(response.body)
 
   log(:info,
-		"ddns_update_enom(#{host}.#{zone}) returned \"#{response.body} (#{response.code})\"")
+		"ddns_update_enom(#{host}.#{zone}) returned \"#{pr['Command']} to #{pr['IP']} at #{pr['Server']} (#{response.code})\"")
 end
 
 def parse_response_enom(body)
 	response = {}
 	body.each do |line|
-		puts line
 		value = line.chomp.split('=')
 		response[value[0]] = value[1]
 	end
-	puts response
 	return response
 end
 
