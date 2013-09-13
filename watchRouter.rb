@@ -49,7 +49,9 @@ include Dnsruby
 
 $stdout.sync = true
 
-require '/etc/watchrouter.secrets'
+load '/etc/watchRouter.secrets'
+
+secrets = get_secrets()
 
 BRpw        = secrets[:enom][:pw]
 HEuser      = secrets[:he][:user]
